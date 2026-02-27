@@ -1,11 +1,10 @@
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
+from config import Config
 
 app = Flask(__name__)
-
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///project_manager.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config.from_object(Config)
 
 db = SQLAlchemy(app)
 
@@ -32,8 +31,8 @@ class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.String(500))
-    status = db.Column(db.String(50), default="pending")  # pending, in-progress, completed
-    priority = db.Column(db.String(20), default="medium")  # low, medium, high
+    status = db.Column(db.String(50), default="pending")
+    priority = db.Column(db.String(20), default="medium")
     due_date = db.Column(db.DateTime)
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=False)
 
@@ -49,7 +48,6 @@ class Task(db.Model):
         }
 
 
-# Create database
 with app.app_context():
     db.create_all()
 
@@ -59,10 +57,9 @@ with app.app_context():
 
 @app.route("/")
 def home():
-    return jsonify({"message": "Project Management API Running"}), 200
+    return jsonify({"message": "Project Management API Running"})
 
 
-# Create Project
 @app.route("/projects", methods=["POST"])
 def create_project():
     data = request.get_json()
@@ -77,20 +74,17 @@ def create_project():
     return jsonify(project.to_dict()), 201
 
 
-# Get All Projects
 @app.route("/projects", methods=["GET"])
 def get_projects():
     projects = Project.query.all()
-    return jsonify([p.to_dict() for p in projects]), 200
+    return jsonify([p.to_dict() for p in projects])
 
 
-# Create Task
 @app.route("/tasks", methods=["POST"])
 def create_task():
     data = request.get_json()
 
-    required_fields = ["title", "project_id"]
-    if not all(field in data for field in required_fields):
+    if not data or not data.get("title") or not data.get("project_id"):
         return jsonify({"error": "Title and project_id required"}), 400
 
     task = Task(
@@ -107,7 +101,6 @@ def create_task():
     return jsonify(task.to_dict()), 201
 
 
-# Get All Tasks (with optional filters)
 @app.route("/tasks", methods=["GET"])
 def get_tasks():
     status = request.args.get("status")
@@ -122,10 +115,9 @@ def get_tasks():
 
     tasks = query.all()
 
-    return jsonify([t.to_dict() for t in tasks]), 200
+    return jsonify([t.to_dict() for t in tasks])
 
 
-# Update Task
 @app.route("/tasks/<int:task_id>", methods=["PUT"])
 def update_task(task_id):
     task = Task.query.get(task_id)
@@ -142,10 +134,9 @@ def update_task(task_id):
 
     db.session.commit()
 
-    return jsonify(task.to_dict()), 200
+    return jsonify(task.to_dict())
 
 
-# Delete Task
 @app.route("/tasks/<int:task_id>", methods=["DELETE"])
 def delete_task(task_id):
     task = Task.query.get(task_id)
@@ -156,7 +147,7 @@ def delete_task(task_id):
     db.session.delete(task)
     db.session.commit()
 
-    return jsonify({"message": "Task deleted"}), 200
+    return jsonify({"message": "Task deleted"})
 
 
 if __name__ == "__main__":
